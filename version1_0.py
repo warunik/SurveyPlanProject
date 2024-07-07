@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import random
 
 # Read the image
-image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/SurveyPlanProject/images/plan (5).jpg'
+image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/SurveyPlanProject/images/plan (6).jpg'
 image = cv2.imread(image_path)
 
 # Convert the image to grayscale

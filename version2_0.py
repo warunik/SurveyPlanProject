@@ -4,93 +4,95 @@ import matplotlib.pyplot as plt
 import random
 
 # Read the image
-image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/Mini Project/images/plan (5).jpg'
+image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/SurveyPlanProject/images/plan (6).jpg'
 image = cv2.imread(image_path)
 
-if image is None:
-    raise ValueError("Image not found. Check the path and try again.")
-
 # Convert the image to grayscale
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Apply Gaussian blur to reduce noise
-blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
 
 # Calculate the gradients using the Sobel operator
-gradient_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
-gradient_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
+grad_x = cv2.Sobel(blurred_image, cv2.CV_64F, 1, 0, ksize=3)
+grad_y = cv2.Sobel(blurred_image, cv2.CV_64F, 0, 1, ksize=3)
 
 # Compute the magnitude of gradients
-magnitude = np.sqrt(gradient_x**2 + gradient_y**2)
+gradient_magnitude = np.sqrt(grad_x**2 + grad_y**2)
 
 # Normalize the magnitude to the range [0, 255]
-magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
-magnitude = np.uint8(magnitude)
+gradient_magnitude = np.uint8(gradient_magnitude)
 
 # Perform thresholding to obtain binary edges
-_, edges = cv2.threshold(magnitude, 50, 255, cv2.THRESH_BINARY)
+_, binary_edges = cv2.threshold(gradient_magnitude, 50, 255, cv2.THRESH_BINARY)
 
 # Find contours in the edge-detected image
-contours, _ = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+contours, _ = cv2.findContours(binary_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 # Select the largest contour (assuming it's the land boundary)
-land_contour = max(contours, key=cv2.contourArea)
+largest_contour = max(contours, key=cv2.contourArea)
 
 # Create a blank image to draw the contour on
-contour_image = np.zeros_like(gray)
+contour_image = np.zeros_like(gray_image)
 
 # Draw the land boundary contour on the blank image
-cv2.drawContours(contour_image, [land_contour], -1, (255), 2)
+cv2.drawContours(contour_image, [largest_contour], -1, (255), 2)
 
+# Analyze middle space within the contour to extract the "real" shape
 # Compute centroid of the contour
-M = cv2.moments(land_contour)
-centroid_x = int(M['m10'] / M['m00'])
-centroid_y = int(M['m01'] / M['m00'])
+moments = cv2.moments(largest_contour)
+centroid_x = int(moments['m10'] / moments['m00'])
+centroid_y = int(moments['m01'] / moments['m00'])
 
 # Create a mask for flood fill
-mask = np.zeros((contour_image.shape[0] + 2, contour_image.shape[1] + 2), dtype=np.uint8)
+flood_fill_mask = np.zeros((contour_image.shape[0] + 2, contour_image.shape[1] + 2), dtype=np.uint8)
 
 # Perform a flood fill starting from the centroid to obtain the filled shape
-cv2.floodFill(contour_image, mask, (centroid_x, centroid_y), 255)
+cv2.floodFill(contour_image, flood_fill_mask, (centroid_x, centroid_y), 255)
 
-# Apply morphological opening
+# Morphological opening to clean the filled shape
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (35, 35))
-opening = cv2.morphologyEx(contour_image, cv2.MORPH_OPEN, kernel)
+cleaned_shape = cv2.morphologyEx(contour_image, cv2.MORPH_OPEN, kernel)
 
-# Count the number of white pixels
-number_of_white_pix = np.sum(opening == 255)
-print('Number of white pixels:', number_of_white_pix)
+# Calculate the number of white pixels (representing the land area)
+num_white_pixels = np.sum(cleaned_shape == 255)
+print('Number of white pixels:', num_white_pixels)
 
-# Divide the white pixels using user input
-no_of_portions = int(input("To how many portions should the land get divided: "))
-pixels_per_portion = number_of_white_pix // no_of_portions
-print('Number of pixels per portion: ', pixels_per_portion)
+# Divide the land area into portions based on user input
+num_portions = int(input("To how many portions should the land get divided: "))
+pixels_per_portion = num_white_pixels // num_portions
+print('Number of pixels per portion:', pixels_per_portion)
 
-def generate_color():
+# Function to generate random colors
+def generate_random_color():
     return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-colors = [generate_color() for _ in range(no_of_portions)]  # Generate colors for each portion
+# Generate colors for each portion
+portion_colors = [generate_random_color() for _ in range(num_portions)]
 
+# Create a copy of the original image to draw the divided land
 divided_image = image.copy()
-portion_index = 0  # Index to keep track of current color
-pixels_colored = 0  # Counter to keep track of colored pixels
 
-for y in range(opening.shape[0]):
-    for x in range(opening.shape[1]):
-        if opening[y, x] == 255:
-            divided_image[y, x] = colors[portion_index]  # Set pixel to current portion's color
-            pixels_colored += 1  # Increment counter
-            
-            if pixels_colored == pixels_per_portion:  # Check if enough pixels for current portion are colored
-                portion_index += 1  # Move to next color for next portion
-                pixels_colored = 0  # Reset counter
-                
-            if portion_index == no_of_portions:  # Check if all portions have been colored
+# Color the land portions
+current_portion = 0
+colored_pixels_count = 0
+
+for y in range(cleaned_shape.shape[0]):
+    for x in range(cleaned_shape.shape[1]):
+        if cleaned_shape[y, x] == 255:
+            divided_image[y, x] = portion_colors[current_portion]
+            colored_pixels_count += 1
+
+            if colored_pixels_count == pixels_per_portion:
+                current_portion += 1
+                colored_pixels_count = 0
+
+            if current_portion == num_portions:
                 break
-    if portion_index == no_of_portions:
+    if current_portion == num_portions:
         break
 
-# Display the original image, land boundary contour, and filled shape
+# Display the original image, land boundary contour, cleaned shape, and divided image
 plt.figure(figsize=(15, 5))
 
 plt.subplot(2, 2, 1)
@@ -104,13 +106,13 @@ plt.title('Land Boundary Contour (Sobel)')
 plt.axis('off')
 
 plt.subplot(2, 2, 3)
-plt.imshow(opening, cmap='gray')
-plt.title('Recorrected Shape')
+plt.imshow(cleaned_shape, cmap='gray')
+plt.title('Cleaned Shape')
 plt.axis('off')
 
 plt.subplot(2, 2, 4)
 plt.imshow(cv2.cvtColor(divided_image, cv2.COLOR_BGR2RGB))
-plt.title('Filled Image')
+plt.title('Divided Land Image')
 plt.axis('off')
 
 plt.show()
