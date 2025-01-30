@@ -150,7 +150,3 @@ plt.show()
 
 ---
 
-
-1. **Version2.0** Calculates the area of a land boundary in an image using the known radius of a coin for calibration.
-2. **Version2.1** Divides the detected land area in an image into user-specified portions and visualizes the divisions.
-3. **Version2.2** Detects a coin in an image, calculates its area for use as a reference, and determines the area of a land boundary in square centimeters.
