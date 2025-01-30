@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 import random
 
 # Read the image
-image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/SurveyPlanProject/images/plan (12).jpg'
+image_path = 'D:/UOP/3rd year/Sem 5/CSC3141 - Image Processing Laboratory/SurveyPlanProject/images/plan (10).jpg'
 image = cv2.imread(image_path)
+
+if image is None:
+    raise ValueError("Image not found. Check the path and try again.")
 
 # Convert the image to grayscale
 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
